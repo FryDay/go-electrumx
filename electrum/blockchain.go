@@ -190,10 +190,7 @@ func (n *Node) BlockchainScripthashSubscribe(scriptHash string) (<-chan string, 
 		return nil, err
 	}
 	scriptHashChan := make(chan string, 1)
-
-	if len(resp.Result) > 0 {
-		scriptHashChan <- resp.Result
-	}
+	scriptHashChan <- resp.Result
 	go func() {
 		for msg := range n.listenPush("blockchain.scripthash.subscribe") {
 			if msg.err != nil {
@@ -233,9 +230,7 @@ func (n *Node) BlockchainAddressSubscribe(address string) (<-chan string, error)
 		return nil, err
 	}
 	addressChan := make(chan string, 1)
-	if len(resp.Result) > 0 {
-		addressChan <- resp.Result
-	}
+	addressChan <- resp.Result
 	go func() {
 		for msg := range n.listenPush("blockchain.address.subscribe") {
 			if msg.err != nil {
