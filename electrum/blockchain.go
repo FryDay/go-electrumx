@@ -66,13 +66,20 @@ type Balance struct {
 	Unconfirmed cashutil.Amount `json:"unconfirmed"`
 }
 
-// TODO implement
 // BlockchainScripthashGetBalance returns the confirmed and unconfirmed balance of a scripthash.
 // method: "blockchain.scripthash.get_balance"
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-scripthash-get-balance
 func (n *Node) BlockchainScripthashGetBalance(scriptHash string) (*Balance, error) {
-	return nil, ErrNotImplemented
+	resp := &struct {
+		Result *Balance `json:"result"`
+	}{}
+	err := n.request("blockchain.scripthash.get_balance", []interface{}{scriptHash}, resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Result, nil
 }
 
 // BlockchainGetBalance returns the balance of an address.
@@ -98,13 +105,20 @@ type Transaction struct {
 	Pos    uint32 `json:"tx_pos"`
 }
 
-// TODO implement
 // BlockchainScripthashGetHistory returns the confirmed and unconfirmed history of a scripthash.
 // method: "blockchain.scripthash.get_history"
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-scripthash-get-history
 func (n *Node) BlockchainScripthashGetHistory(scriptHash string) ([]*Transaction, error) {
-	return nil, ErrNotImplemented
+	resp := &struct {
+		Result []*Transaction `json:"result"`
+	}{}
+	err := n.request("blockchain.scripthash.get_history", []interface{}{scriptHash}, resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Result, nil
 }
 
 // BlockchainAddressGetHistory returns the history of an address.
@@ -165,13 +179,46 @@ func (n *Node) BlockchainAddressListUnspent(address string) ([]*Transaction, err
 	return resp.Result, nil
 }
 
-// TODO implement
 // BlockchainScripthashSubscribe subscribes to a script hash.
 // method: "blockchain.scripthash.subscribe"
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-scripthash-subscribe
 func (n *Node) BlockchainScripthashSubscribe(scriptHash string) (<-chan string, error) {
-	return nil, ErrNotImplemented
+	resp := &basicResp{}
+	err := n.request("blockchain.scripthash.subscribe", []interface{}{scriptHash}, resp)
+	if err != nil {
+		return nil, err
+	}
+	scriptHashChan := make(chan string, 1)
+
+	if len(resp.Result) > 0 {
+		scriptHashChan <- resp.Result
+	}
+	go func() {
+		for msg := range n.listenPush("blockchain.scripthash.subscribe") {
+			if msg.err != nil {
+				return
+			}
+
+			resp := &struct {
+				Params []string `json:"params"`
+			}{}
+			if err := json.Unmarshal(msg.content, resp); err != nil {
+				// TODO handle error. Notify the error for caller about that electrum server
+				// will not track the balance change for the param scriptHash
+				return
+			}
+			if len(resp.Params) != 2 {
+				continue
+			}
+
+			if resp.Params[0] == scriptHash {
+				scriptHashChan <- resp.Params[1]
+			}
+		}
+	}()
+
+	return scriptHashChan, nil
 }
 
 // BlockchainAddressSubscribe subscribes to transactions on an address and
