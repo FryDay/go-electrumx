@@ -237,3 +237,7 @@ func (n *Node) shutdown() {
 	n.handlers = nil
 	n.pushHandlers = nil
 }
+
+func (n *Node) Disconnect() {
+	n.shutdown()
+}
