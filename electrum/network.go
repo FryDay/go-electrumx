@@ -122,6 +122,16 @@ func (n *Node) ConnectSSL(addr string, config *tls.Config) error {
 // listen processes messages from the server.
 func (n *Node) listen() {
 	for {
+		// Not exactly sure how this happened, but it must be a race condition
+		// where disconnect and shutdown are called right after each other.
+		//
+		// Regardless, if there is no transport we should not be inside this
+		// loop
+		if n.transport == nil {
+			log.Printf("Transport is nil inside Node.listen(), exiting loop")
+			return
+		}
+
 		select {
 		case err := <-n.transport.Errors():
 			n.Error <- err
