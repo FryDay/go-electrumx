@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/qshuai/go-electrum/electrum"
+	"github.com/FryDay/go-electrumx/electrumx"
 )
 
 func main() {
-	electrum.DebugMode = true
+	electrumx.DebugMode = true
 
-	node := electrum.NewNode()
+	node := electrumx.NewNode()
 
 	go func() {
 		for {

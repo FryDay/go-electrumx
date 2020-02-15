@@ -1,5 +1,5 @@
 /*
-Package wallet provides a simple interface to btcwallet and electrum.
+Package wallet provides a simple interface to btcwallet and electrumx.
 
 This is designed to make accepting and sending bitcoin really easy using Go.
 */
@@ -9,13 +9,13 @@ import (
 	"log"
 	"time"
 
+	"github.com/FryDay/go-electrumx/electrumx"
 	"github.com/bcext/cashutil"
 	"github.com/bcext/cashwallet/netparams"
 	"github.com/bcext/cashwallet/waddrmgr"
 	"github.com/bcext/cashwallet/wallet"
 	"github.com/bcext/cashwallet/walletdb"
 	"github.com/bcext/cashwallet/wtxmgr"
-	"github.com/qshuai/go-electrum/electrum"
 
 	_ "github.com/bcext/cashwallet/walletdb/bdb"
 )
@@ -29,7 +29,7 @@ var (
 
 type Wallet struct {
 	wallet *wallet.Wallet
-	node   *electrum.Node
+	node   *electrumx.Node
 }
 
 // Addresses returns all addresses generated in the current bitcoin wallet.
@@ -182,7 +182,7 @@ func openWallet(db walletdb.DB, privPass string, seed []byte) (*Wallet, error) {
 	}
 
 	// TODO: use more than 1 node
-	node := electrum.NewNode()
+	node := electrumx.NewNode()
 	if err := node.ConnectTCP("btc.mustyoshi.com:50001"); err != nil {
 		return nil, err
 	}

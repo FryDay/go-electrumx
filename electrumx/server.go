@@ -1,4 +1,4 @@
-package electrum
+package electrumx
 
 // TODO implement
 // ServerAddPeer add a peer (but only if the peer resolves to the source).

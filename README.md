@@ -1,24 +1,24 @@
-# go-electrum [![GoDoc](https://godoc.org/github.com/qshuai/go-electrum?status.svg)](https://godoc.org/github.com/qshuai/go-electrum)
-This repository is a fork of [d4l3k/go-electrum](https://github.com/d4l3k/go-electrum) that is unmaintained now. 
+# go-electrumx [![GoDoc](https://godoc.org/github.com/FryDay/go-electrumx?status.svg)](https://godoc.org/github.com/FryDay/go-electrumx)
 
-A pure Go [Electrum](https://electrum.org/) bitcoin library. This makes it easy to write bitcoin based services using Go without having to run a full bitcoin node.
+This repository is a fork of [ccampbell/go-electrum](https://github.com/ccampbell/go-electrum) which is a fork of [d4l3k/go-electrum](https://github.com/d4l3k/go-electrum), both of which are unmaintained now.
 
-![go-electrum](/media/logo.png)
+A pure Go [ElectrumX](https://electrumx.readthedocs.io/) bitcoin library. This makes it easy to write bitcoin based services using Go without having to run a full bitcoin node.
 
-This is very much WIP and has a number of unimplemented methods. This will eventually be rewritten into a more Go-esque library and handle wallet generation.
+![go-electrumx](/media/logo.png)
 
 Packages provided
 
-* [electrum](https://godoc.org/github.com/qshuai/go-electrum/electrum) - Library for using JSON-RPC to talk directly to Electrum servers.
-* [wallet](https://godoc.org/github.com/qshuai/go-electrum/wallet) - A bitcoin wallet built on [btcwallet](https://github.com/btcsuite/btcwallet) with Electrum as the backend. **Notice: not available at the current vertsion**.
-* [irc](https://godoc.org/github.com/qshuai/go-electrum/irc) - A helper module for finding electrum servers using the [#electrum IRC channel](http://docs.electrum.org/en/latest/protocol.html?highlight=irc#server-peers-subscribe) on Freenode. **Notice: not supported**.
+- [electrumx](https://godoc.org/github.com/FryDay/go-electrumx/electrumx) - Library for using JSON-RPC to talk directly to ElectrumX servers.
+- [wallet](https://godoc.org/github.com/FryDay/go-electrumx/wallet) - A bitcoin wallet built on [btcwallet](https://github.com/btcsuite/btcwallet) with ElectrumX as the backend.
 
 ## Usage
-See [example/](https://github.com/qshuai/go-electrum/tree/master/example) for more.
 
-### electrum [![GoDoc](https://godoc.org/github.com/qshuai/go-electrum/electrum?status.svg)](https://godoc.org/github.com/qshuai/go-electrum/electrum)
+See [example/](https://github.com/FryDay/go-electrumx/tree/master/example) for more.
+
+### electrumx [![GoDoc](https://godoc.org/github.com/FryDay/go-electrumx/electrumx?status.svg)](https://godoc.org/github.com/FryDay/go-electrumx/electrumx)
+
 ```bash
-$ go get -u github.com/qshuai/go-electrum/electrum
+$ go get -u github.com/FryDay/go-electrumx/electrumx
 ```
 
 ```go
@@ -27,19 +27,19 @@ package main
 import (
   "log"
 
-  "github.com/qshuai/go-electrum/electrum"
+  "github.com/FryDay/go-electrumx/electrumx"
 )
 
 func main() {
     // turn on debug mode
-    electrum.DebugMode = true
+    electrumx.DebugMode = true
 
-	node := electrum.NewNode()
+	node := electrumx.NewNode()
     // the specified ip is testnet server
 	if err := node.ConnectTCP("39.104.125.149:9629"); err != nil {
 		log.Fatal(err)
 	}
-    
+
     // please use bitcoin address accordant to the server environment
 	balance, err := node.BlockchainAddressGetBalance("n4FyJMDYXJmPEm7cffFLrwLXvGWn8cW9q2")
 	if err != nil {
@@ -50,6 +50,5 @@ func main() {
 ```
 
 # License
-go-electrum is licensed under the MIT license.
 
-Made by [Tristan Rice](https://fn.lc).
+go-electrumx is licensed under the MIT license.

@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/qshuai/go-electrum/electrum"
+	"github.com/FryDay/go-electrumx/electrumx"
 )
 
 var (
@@ -19,9 +19,9 @@ var (
 )
 
 func main() {
-	electrum.DebugMode = true
+	electrumx.DebugMode = true
 
-	node := electrum.NewNode()
+	node := electrumx.NewNode()
 	if err := node.ConnectTCP(serverAddr); err != nil {
 		log.Fatal(err)
 	}

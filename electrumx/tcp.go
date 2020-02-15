@@ -1,4 +1,4 @@
-package electrum
+package electrumx
 
 import (
 	"bufio"
