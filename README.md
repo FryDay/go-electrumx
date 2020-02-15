@@ -13,7 +13,7 @@ Packages provided
 
 ## Usage
 
-See [example/](https://github.com/FryDay/go-electrumx/tree/master/example) for more.
+See [examples](https://github.com/FryDay/go-electrumx/tree/master/examples) for more.
 
 ### electrumx [![GoDoc](https://godoc.org/github.com/FryDay/go-electrumx/electrumx?status.svg)](https://godoc.org/github.com/FryDay/go-electrumx/electrumx)
 
@@ -27,7 +27,7 @@ package main
 import (
   "log"
 
-  "github.com/FryDay/go-electrumx/electrumx"
+  "github.com/FryDay/go-electrumx"
 )
 
 func main() {
@@ -48,6 +48,12 @@ func main() {
 	log.Printf("Address balance: %+v", balance)
 }
 ```
+
+# Donate
+
+If you find these packages useful, please consider flipping me a few satoshis :hugs:
+
+<img src="https://github.com/FryDay/go-electrumx/raw/master/media/qr.png" alt="bc1qdlg5jwyaa7gyx2gxdmtqhz4l7uy09xy4rrjfm4" title="bc1qdlg5jwyaa7gyx2gxdmtqhz4l7uy09xy4rrjfm4" width="300px" />
 
 # License
 
