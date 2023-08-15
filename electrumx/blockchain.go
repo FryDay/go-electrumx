@@ -2,8 +2,6 @@ package electrumx
 
 import (
 	"encoding/json"
-
-	"github.com/bcext/cashutil"
 )
 
 type BlockchainHeader struct {
@@ -62,8 +60,11 @@ func (n *Node) BlockchainRelayfee() error {
 }
 
 type Balance struct {
-	Confirmed   cashutil.Amount `json:"confirmed"`
-	Unconfirmed cashutil.Amount `json:"unconfirmed"`
+	// Satoshis
+	Confirmed int64 `json:"confirmed"`
+
+	// Satoshis
+	Unconfirmed int64 `json:"unconfirmed"`
 }
 
 // BlockchainScripthashGetBalance returns the confirmed and unconfirmed balance of a scripthash.
