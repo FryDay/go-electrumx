@@ -1,6 +1,7 @@
 package electrumx
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -8,7 +9,6 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 const delim = byte('\n')
@@ -17,7 +17,6 @@ var (
 	ErrNotImplemented = errors.New("not implemented")
 	ErrNodeConnected  = errors.New("node already connected")
 	ErrNodeShutdown   = errors.New("node has shutdown")
-	ErrTimeout        = errors.New("request timeout")
 )
 
 type Transport interface {
@@ -188,7 +187,7 @@ func (n *Node) listenPush(method string) <-chan *container {
 }
 
 // request makes a request to the server and unmarshals the response into v.
-func (n *Node) request(method string, params []interface{}, v interface{}) error {
+func (n *Node) request(ctx context.Context, method string, params []interface{}, v interface{}) error {
 	select {
 	case <-n.quit:
 		return ErrNodeShutdown
@@ -218,8 +217,8 @@ func (n *Node) request(method string, params []interface{}, v interface{}) error
 	var resp *container
 	select {
 	case resp = <-c:
-	case <-time.After(5 * time.Second):
-		return ErrTimeout
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 
 	if resp.err != nil {
