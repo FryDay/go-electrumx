@@ -19,12 +19,6 @@ var (
 	ErrNodeShutdown   = errors.New("node has shutdown")
 )
 
-type Transport interface {
-	SendMessage([]byte) error
-	Responses() <-chan []byte
-	Errors() <-chan error
-}
-
 type response struct {
 	Id     uint64  `json:"id"`
 	Method string  `json:"method"`
@@ -56,7 +50,7 @@ type container struct {
 }
 
 type Node struct {
-	transport Transport
+	transport *transport
 
 	handlersLock sync.RWMutex
 	handlers     map[uint64]chan *container
@@ -87,28 +81,14 @@ func NewNode() *Node {
 	return n
 }
 
-// ConnectTCP creates a new TCP connection to the specified address.
-func (n *Node) ConnectTCP(addr string) error {
+// Connect creates a new TCP connection to the specified address. If the TLS
+// config is not nil, TLS is applied to the connection.
+func (n *Node) Connect(ctx context.Context, addr string, config *tls.Config) error {
 	if n.transport != nil {
 		return ErrNodeConnected
 	}
 
-	transport, err := NewTCPTransport(addr)
-	if err != nil {
-		return err
-	}
-	n.transport = transport
-	go n.listen()
-
-	return nil
-}
-
-// ConnectSLL creates a new SLL connection to the specified address.
-func (n *Node) ConnectSSL(addr string, config *tls.Config) error {
-	if n.transport != nil {
-		return ErrNodeConnected
-	}
-	transport, err := NewSSLTransport(addr, config)
+	transport, err := newTransport(ctx, addr, config)
 	if err != nil {
 		return err
 	}
@@ -132,10 +112,10 @@ func (n *Node) listen() {
 		}
 
 		select {
-		case err := <-n.transport.Errors():
+		case err := <-n.transport.errors:
 			n.Error <- err
 			n.shutdown()
-		case bytes := <-n.transport.Responses():
+		case bytes := <-n.transport.responses:
 			result := &container{
 				content: bytes,
 			}
