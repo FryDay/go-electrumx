@@ -2,7 +2,9 @@ package electrumx
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net"
 	"time"
@@ -10,21 +12,29 @@ import (
 
 var DebugMode bool
 
-const connTimeout = 3 * time.Second
-
-type TCPTransport struct {
+type transport struct {
 	conn      net.Conn
 	responses chan []byte
 	errors    chan error
 }
 
-func NewTCPTransport(addr string) (*TCPTransport, error) {
-	conn, err := net.DialTimeout("tcp", addr, connTimeout)
+func newConn(ctx context.Context, addr string, tlsConfig *tls.Config) (net.Conn, error) {
+	if tlsConfig != nil {
+		var d tls.Dialer
+		d.Config = tlsConfig
+		return d.DialContext(ctx, "tcp", addr)
+	}
+	var d net.Dialer
+	return d.DialContext(ctx, "tcp", addr)
+}
+
+func newTransport(ctx context.Context, addr string, sslConfig *tls.Config) (*transport, error) {
+	conn, err := newConn(ctx, addr, sslConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	t := &TCPTransport{
+	t := &transport{
 		conn:      conn,
 		responses: make(chan []byte),
 		errors:    make(chan error),
@@ -34,35 +44,34 @@ func NewTCPTransport(addr string) (*TCPTransport, error) {
 	return t, nil
 }
 
-func NewSSLTransport(addr string, config *tls.Config) (*TCPTransport, error) {
-	dialer := net.Dialer{
-		Timeout: connTimeout,
-	}
-	conn, err := tls.DialWithDialer(&dialer, "tcp", addr, config)
-	if err != nil {
-		return nil, err
-	}
-
-	t := &TCPTransport{
-		conn:      conn,
-		responses: make(chan []byte),
-		errors:    make(chan error),
-	}
-	go t.listen()
-
-	return t, nil
-}
-
-func (t *TCPTransport) SendMessage(body []byte) error {
+func (t *transport) SendMessage(ctx context.Context, body []byte) error {
 	if DebugMode {
 		log.Printf("%s [debug] %s <- %s", time.Now().Format("2006-01-02 15:04:05"), t.conn.RemoteAddr(), body)
 	}
 
-	_, err := t.conn.Write(body)
-	return err
+	done := make(chan struct{})
+	errs := make(chan error)
+	go func() {
+		if _, err := t.conn.Write(body); err != nil {
+			errs <- err
+			return
+		}
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("send message: %w", ctx.Err())
+
+	case err := <-errs:
+		return fmt.Errorf("send message: %w", err)
+
+	case <-done:
+		return nil
+	}
 }
 
-func (t *TCPTransport) listen() {
+func (t *transport) listen() {
 	defer t.conn.Close()
 	reader := bufio.NewReader(t.conn)
 	for {
@@ -82,12 +91,4 @@ func (t *TCPTransport) listen() {
 
 		t.responses <- line
 	}
-}
-
-func (t *TCPTransport) Responses() <-chan []byte {
-	return t.responses
-}
-
-func (t *TCPTransport) Errors() <-chan error {
-	return t.errors
 }

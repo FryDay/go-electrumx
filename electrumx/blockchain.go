@@ -1,9 +1,8 @@
 package electrumx
 
 import (
+	"context"
 	"encoding/json"
-
-	"github.com/bcext/cashutil"
 )
 
 type BlockchainHeader struct {
@@ -39,11 +38,11 @@ func (n *Node) BlockchainBlockGetHeader(height int32) error {
 // to be confirmed within a certain number of blocks.
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-estimatefee
-func (n *Node) BlockchainEstimateFee(block int) (float64, error) {
+func (n *Node) BlockchainEstimateFee(ctx context.Context, block int) (float64, error) {
 	resp := &struct {
 		Result float64 `json:"result"`
 	}{}
-	err := n.request("blockchain.estimatefee", []interface{}{block}, resp)
+	err := n.request(ctx, "blockchain.estimatefee", []interface{}{block}, resp)
 	if err != nil {
 		return 0, err
 	}
@@ -62,19 +61,22 @@ func (n *Node) BlockchainRelayfee() error {
 }
 
 type Balance struct {
-	Confirmed   cashutil.Amount `json:"confirmed"`
-	Unconfirmed cashutil.Amount `json:"unconfirmed"`
+	// Satoshis
+	Confirmed int64 `json:"confirmed"`
+
+	// Satoshis
+	Unconfirmed int64 `json:"unconfirmed"`
 }
 
 // BlockchainScripthashGetBalance returns the confirmed and unconfirmed balance of a scripthash.
 // method: "blockchain.scripthash.get_balance"
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-scripthash-get-balance
-func (n *Node) BlockchainScripthashGetBalance(scriptHash string) (*Balance, error) {
+func (n *Node) BlockchainScripthashGetBalance(ctx context.Context, scriptHash string) (*Balance, error) {
 	resp := &struct {
 		Result *Balance `json:"result"`
 	}{}
-	err := n.request("blockchain.scripthash.get_balance", []interface{}{scriptHash}, resp)
+	err := n.request(ctx, "blockchain.scripthash.get_balance", []interface{}{scriptHash}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +88,11 @@ func (n *Node) BlockchainScripthashGetBalance(scriptHash string) (*Balance, erro
 // Available(version < 1.3)
 //
 // http://docs.electrum.org/en/latest/protocol.html#blockchain-address-get-balance
-func (n *Node) BlockchainAddressGetBalance(address string) (*Balance, error) {
+func (n *Node) BlockchainAddressGetBalance(ctx context.Context, address string) (*Balance, error) {
 	resp := &struct {
 		Result *Balance `json:"result"`
 	}{}
-	err := n.request("blockchain.address.get_balance", []interface{}{address}, resp)
+	err := n.request(ctx, "blockchain.address.get_balance", []interface{}{address}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +111,11 @@ type Transaction struct {
 // method: "blockchain.scripthash.get_history"
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-scripthash-get-history
-func (n *Node) BlockchainScripthashGetHistory(scriptHash string) ([]*Transaction, error) {
+func (n *Node) BlockchainScripthashGetHistory(ctx context.Context, scriptHash string) ([]*Transaction, error) {
 	resp := &struct {
 		Result []*Transaction `json:"result"`
 	}{}
-	err := n.request("blockchain.scripthash.get_history", []interface{}{scriptHash}, resp)
+	err := n.request(ctx, "blockchain.scripthash.get_history", []interface{}{scriptHash}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -125,11 +127,11 @@ func (n *Node) BlockchainScripthashGetHistory(scriptHash string) ([]*Transaction
 // Available(version < 1.3)
 //
 // http://docs.electrum.org/en/latest/protocol.html#blockchain-address-get-history
-func (n *Node) BlockchainAddressGetHistory(address string) ([]*Transaction, error) {
+func (n *Node) BlockchainAddressGetHistory(ctx context.Context, address string) ([]*Transaction, error) {
 	resp := &struct {
 		Result []*Transaction `json:"result"`
 	}{}
-	err := n.request("blockchain.address.get_history", []interface{}{address}, resp)
+	err := n.request(ctx, "blockchain.address.get_history", []interface{}{address}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +149,8 @@ func (n *Node) BlockchainScripthashGetMempool(scriptHash string) error {
 }
 
 // TODO implement
-//  Available(version < 1.3)
+//
+//	Available(version < 1.3)
 //
 // http://docs.electrum.org/en/latest/protocol.html#blockchain-address-get-mempool
 func (n *Node) BlockchainAddressGetMempool() error {
@@ -167,11 +170,11 @@ func (n *Node) BlockchainScripthashListUnspent(scriptHash string) ([]*Transactio
 // Available(version < 1.3)
 //
 // http://docs.electrum.org/en/latest/protocol.html#blockchain-address-listunspent
-func (n *Node) BlockchainAddressListUnspent(address string) ([]*Transaction, error) {
+func (n *Node) BlockchainAddressListUnspent(ctx context.Context, address string) ([]*Transaction, error) {
 	resp := &struct {
 		Result []*Transaction `json:"result"`
 	}{}
-	err := n.request("blockchain.address.listunspent", []interface{}{address}, resp)
+	err := n.request(ctx, "blockchain.address.listunspent", []interface{}{address}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -183,9 +186,9 @@ func (n *Node) BlockchainAddressListUnspent(address string) ([]*Transaction, err
 // method: "blockchain.scripthash.subscribe"
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-scripthash-subscribe
-func (n *Node) BlockchainScripthashSubscribe(scriptHash string) (<-chan string, error) {
+func (n *Node) BlockchainScripthashSubscribe(ctx context.Context, scriptHash string) (<-chan string, error) {
 	resp := &basicResp{}
-	err := n.request("blockchain.scripthash.subscribe", []interface{}{scriptHash}, resp)
+	err := n.request(ctx, "blockchain.scripthash.subscribe", []interface{}{scriptHash}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -223,9 +226,9 @@ func (n *Node) BlockchainScripthashSubscribe(scriptHash string) (<-chan string, 
 // Available(version < 1.3)
 //
 // http://docs.electrum.org/en/latest/protocol.html#blockchain-address-subscribe
-func (n *Node) BlockchainAddressSubscribe(address string) (<-chan string, error) {
+func (n *Node) BlockchainAddressSubscribe(ctx context.Context, address string) (<-chan string, error) {
 	resp := &basicResp{}
-	err := n.request("blockchain.address.subscribe", []interface{}{address}, resp)
+	err := n.request(ctx, "blockchain.address.subscribe", []interface{}{address}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -262,11 +265,11 @@ func (n *Node) BlockchainAddressSubscribe(address string) (<-chan string, error)
 // Broadcast a transaction to the network.
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-transaction-broadcast
-func (n *Node) BlockchainTransactionBroadcast(tx string) (interface{}, error) {
+func (n *Node) BlockchainTransactionBroadcast(ctx context.Context, tx string) (interface{}, error) {
 	resp := &struct {
 		Result interface{} `json:"result"`
 	}{}
-	err := n.request("blockchain.transaction.broadcast", []interface{}{tx}, resp)
+	err := n.request(ctx, "blockchain.transaction.broadcast", []interface{}{tx}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -356,11 +359,11 @@ type Vout struct {
 // BlockchainTransactionGet returns a raw transaction.
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-transaction-get
-func (n *Node) BlockchainTransactionGet(txid string, verbose bool) (*GetTransaction, error) {
+func (n *Node) BlockchainTransactionGet(ctx context.Context, txid string, verbose bool) (*GetTransaction, error) {
 	resp := &struct {
 		Result GetTransaction `json:"result"`
 	}{}
-	err := n.request("blockchain.transaction.get", []interface{}{txid, verbose}, resp)
+	err := n.request(ctx, "blockchain.transaction.get", []interface{}{txid, verbose}, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -379,30 +382,37 @@ func (n *Node) BlockchainTransactionGetMerkle() error {
 // BlockchainHeadersSubscribe subscribes to get raw headers of new blocks.
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-headers-subscribe
-func (n *Node) BlockchainHeadersSubscribe() (<-chan *BlockchainHeader, error) {
+func (n *Node) BlockchainHeadersSubscribe(ctx context.Context) (<-chan *BlockchainHeader, error) {
 	resp := &struct {
 		Result *BlockchainHeader `json:"result"`
 	}{}
-	if err := n.request("blockchain.headers.subscribe", []interface{}{}, resp); err != nil {
+	if err := n.request(ctx, "blockchain.headers.subscribe", []interface{}{}, resp); err != nil {
 		return nil, err
 	}
 	headerChan := make(chan *BlockchainHeader, 1)
 	headerChan <- resp.Result
 	go func() {
-		for msg := range n.listenPush("blockchain.headers.subscribe") {
-			if msg.err != nil {
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
 
-			resp := &struct {
-				Params []*BlockchainHeader `json:"params"`
-			}{}
-			if err := json.Unmarshal(msg.content, resp); err != nil {
-				// TODO: deal with error
-				return
-			}
-			for _, param := range resp.Params {
-				headerChan <- param
+			case msg := <-n.listenPush("blockchain.headers.subscribe"):
+
+				if msg.err != nil {
+					return
+				}
+
+				resp := &struct {
+					Params []*BlockchainHeader `json:"params"`
+				}{}
+				if err := json.Unmarshal(msg.content, resp); err != nil {
+					// TODO: deal with error
+					return
+				}
+				for _, param := range resp.Params {
+					headerChan <- param
+				}
 			}
 		}
 	}()
