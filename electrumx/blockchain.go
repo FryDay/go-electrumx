@@ -148,7 +148,8 @@ func (n *Node) BlockchainScripthashGetMempool(scriptHash string) error {
 }
 
 // TODO implement
-//  Available(version < 1.3)
+//
+//	Available(version < 1.3)
 //
 // http://docs.electrum.org/en/latest/protocol.html#blockchain-address-get-mempool
 func (n *Node) BlockchainAddressGetMempool() error {
