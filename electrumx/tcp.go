@@ -44,13 +44,31 @@ func newTransport(ctx context.Context, addr string, sslConfig *tls.Config) (*tra
 	return t, nil
 }
 
-func (t *transport) SendMessage(body []byte) error {
+func (t *transport) SendMessage(ctx context.Context, body []byte) error {
 	if DebugMode {
 		log.Printf("%s [debug] %s <- %s", time.Now().Format("2006-01-02 15:04:05"), t.conn.RemoteAddr(), body)
 	}
 
-	_, err := t.conn.Write(body)
-	return err
+	done := make(chan struct{})
+	errs := make(chan error)
+	go func() {
+		if _, err := t.conn.Write(body); err != nil {
+			errs <- err
+			return
+		}
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("send message: %w", ctx.Err())
+
+	case err := <-errs:
+		return fmt.Errorf("send message: %w", err)
+
+	case <-done:
+		return nil
+	}
 }
 
 func (t *transport) listen() {

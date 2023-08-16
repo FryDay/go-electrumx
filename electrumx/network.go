@@ -184,7 +184,7 @@ func (n *Node) request(ctx context.Context, method string, params []interface{},
 		return err
 	}
 	bytes = append(bytes, delim)
-	if err := n.transport.SendMessage(bytes); err != nil {
+	if err := n.transport.SendMessage(ctx, bytes); err != nil {
 		return err
 	}
 
