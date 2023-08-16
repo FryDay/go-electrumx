@@ -25,6 +25,7 @@ $ go get -u github.com/FryDay/go-electrumx/electrumx
 package main
 
 import (
+  "context"
   "log"
 
   "github.com/FryDay/go-electrumx"
@@ -33,15 +34,16 @@ import (
 func main() {
     // turn on debug mode
     electrumx.DebugMode = true
+    ctx := context.TODO()
 
 	node := electrumx.NewNode()
     // the specified ip is testnet server
-	if err := node.ConnectTCP("39.104.125.149:9629"); err != nil {
+	if err := node.ConnectTCP(ctx, "39.104.125.149:9629", nil); err != nil {
 		log.Fatal(err)
 	}
 
     // please use bitcoin address accordant to the server environment
-	balance, err := node.BlockchainAddressGetBalance("n4FyJMDYXJmPEm7cffFLrwLXvGWn8cW9q2")
+	balance, err := node.BlockchainAddressGetBalance(ctx, "n4FyJMDYXJmPEm7cffFLrwLXvGWn8cW9q2")
 	if err != nil {
 		log.Fatal(err)
 	}
