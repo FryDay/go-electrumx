@@ -93,13 +93,25 @@ func (n *Node) Connect(ctx context.Context, addr string, config *tls.Config) err
 		return err
 	}
 	n.transport = transport
-	go n.listen()
+
+	listenCtx, cancel := context.WithCancel(context.Background())
+	go func() {
+		n.transport.listen(listenCtx)
+	}()
+
+	// Quit the transport listening once the node shuts down
+	go func() {
+		<-n.quit
+		cancel()
+	}()
+
+	go n.listen(listenCtx)
 
 	return nil
 }
 
 // listen processes messages from the server.
-func (n *Node) listen() {
+func (n *Node) listen(ctx context.Context) {
 	for {
 		// Not exactly sure how this happened, but it must be a race condition
 		// where disconnect and shutdown are called right after each other.
@@ -112,6 +124,12 @@ func (n *Node) listen() {
 		}
 
 		select {
+		case <-ctx.Done():
+			if DebugMode {
+				log.Printf("node: listen: context finished, exiting loop")
+			}
+			return
+
 		case err := <-n.transport.errors:
 			n.Error <- err
 			n.shutdown()
