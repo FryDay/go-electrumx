@@ -20,18 +20,9 @@ var (
 )
 
 type response struct {
-	Id     uint64  `json:"id"`
-	Method string  `json:"method"`
-	Error  *APIErr `json:"error"`
-}
-
-type APIErr struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-func (e *APIErr) Error() string {
-	return fmt.Sprintf("errorNo: %d, errMsg: %s", e.Code, e.Message)
+	Id     uint64 `json:"id"`
+	Method string `json:"method"`
+	Error  any    `json:"error"`
 }
 
 type request struct {
@@ -146,7 +137,7 @@ func (n *Node) listen(ctx context.Context) {
 
 				result.err = fmt.Errorf("unmarshal received message failed: %v", err)
 			} else if msg.Error != nil {
-				result.err = msg.Error
+				result.err = errors.New(fmt.Sprint(msg.Error))
 			}
 
 			// subscribe message if returned message with 'method' field
