@@ -20,18 +20,9 @@ var (
 )
 
 type response struct {
-	Id     uint64  `json:"id"`
-	Method string  `json:"method"`
-	Error  *APIErr `json:"error"`
-}
-
-type APIErr struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-func (e *APIErr) Error() string {
-	return fmt.Sprintf("errorNo: %d, errMsg: %s", e.Code, e.Message)
+	Id     uint64 `json:"id"`
+	Method string `json:"method"`
+	Error  any    `json:"error"`
 }
 
 type request struct {
@@ -58,8 +49,8 @@ type Node struct {
 	pushHandlersLock sync.RWMutex
 	pushHandlers     map[string][]chan *container
 
-	Error chan error
-	quit  chan struct{}
+	errs chan error
+	quit chan struct{}
 
 	// nextId tags a request, and get the same id from server result.
 	// Should be atomic operation for concurrence.
@@ -74,11 +65,16 @@ func NewNode() *Node {
 		handlers:     make(map[uint64]chan *container),
 		pushHandlers: make(map[string][]chan *container),
 
-		Error: make(chan error),
-		quit:  make(chan struct{}),
+		errs: make(chan error),
+		quit: make(chan struct{}),
 	}
 
 	return n
+}
+
+// Errors returns any errors the node ran into while listening to messages.
+func (n *Node) Errors() <-chan error {
+	return n.errs
 }
 
 // Connect creates a new TCP connection to the specified address. If the TLS
@@ -93,13 +89,25 @@ func (n *Node) Connect(ctx context.Context, addr string, config *tls.Config) err
 		return err
 	}
 	n.transport = transport
-	go n.listen()
+
+	listenCtx, cancel := context.WithCancel(context.Background())
+	go func() {
+		n.transport.listen(listenCtx)
+	}()
+
+	// Quit the transport listening once the node shuts down
+	go func() {
+		<-n.quit
+		cancel()
+	}()
+
+	go n.listen(listenCtx)
 
 	return nil
 }
 
 // listen processes messages from the server.
-func (n *Node) listen() {
+func (n *Node) listen(ctx context.Context) {
 	for {
 		// Not exactly sure how this happened, but it must be a race condition
 		// where disconnect and shutdown are called right after each other.
@@ -112,9 +120,15 @@ func (n *Node) listen() {
 		}
 
 		select {
+		case <-ctx.Done():
+			if DebugMode {
+				log.Printf("node: listen: context finished, exiting loop")
+			}
+			return
+
 		case err := <-n.transport.errors:
-			n.Error <- err
-			n.shutdown()
+			n.errs <- fmt.Errorf("transport: %w", err)
+
 		case bytes := <-n.transport.responses:
 			result := &container{
 				content: bytes,
@@ -128,7 +142,7 @@ func (n *Node) listen() {
 
 				result.err = fmt.Errorf("unmarshal received message failed: %v", err)
 			} else if msg.Error != nil {
-				result.err = msg.Error
+				result.err = errors.New(fmt.Sprint(msg.Error))
 			}
 
 			// subscribe message if returned message with 'method' field
@@ -219,14 +233,32 @@ func (n *Node) request(ctx context.Context, method string, params []interface{},
 	return nil
 }
 
-func (n *Node) shutdown() {
+// Disconnect shuts down the node. It is safe to call multiple times. Subsequent
+// calls to the first one are no-ops.
+// TODO: implement support for draining requests and waiting until everything is
+// finished.
+func (n *Node) Disconnect() {
+	select {
+	// Already called! Make it a no-op
+	case <-n.quit:
+		return
+
+	default:
+	}
+
+	if n.transport == nil {
+		log.Printf("WARNING: disconnecting node before transport is set up")
+		return
+	}
+
+	if DebugMode {
+		log.Printf("disconnecting node")
+	}
+
 	close(n.quit)
 
-	n.transport = nil
+	n.transport.conn.Close()
+
 	n.handlers = nil
 	n.pushHandlers = nil
-}
-
-func (n *Node) Disconnect() {
-	n.shutdown()
 }

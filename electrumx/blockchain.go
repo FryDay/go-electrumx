@@ -360,6 +360,15 @@ type Vout struct {
 //
 // https://electrumx.readthedocs.io/en/latest/protocol-methods.html#blockchain-transaction-get
 func (n *Node) BlockchainTransactionGet(ctx context.Context, txid string, verbose bool) (*GetTransaction, error) {
+	if !verbose {
+		hex, err := n.blockchainTransactionGetNonVerbose(ctx, txid)
+		if err != nil {
+			return nil, err
+		}
+
+		return &GetTransaction{Hex: hex}, nil
+	}
+
 	resp := &struct {
 		Result GetTransaction `json:"result"`
 	}{}
@@ -369,6 +378,18 @@ func (n *Node) BlockchainTransactionGet(ctx context.Context, txid string, verbos
 	}
 
 	return &resp.Result, nil
+}
+
+func (n *Node) blockchainTransactionGetNonVerbose(ctx context.Context, txid string) (string, error) {
+	resp := struct {
+		Result string `json:"result"`
+	}{}
+	err := n.request(ctx, "blockchain.transaction.get", []interface{}{txid, false}, &resp)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.Result, nil
 }
 
 // TODO implement

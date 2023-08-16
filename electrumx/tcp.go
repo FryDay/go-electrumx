@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -39,7 +41,6 @@ func newTransport(ctx context.Context, addr string, sslConfig *tls.Config) (*tra
 		responses: make(chan []byte),
 		errors:    make(chan error),
 	}
-	go t.listen()
 
 	return t, nil
 }
@@ -71,24 +72,63 @@ func (t *transport) SendMessage(ctx context.Context, body []byte) error {
 	}
 }
 
-func (t *transport) listen() {
-	defer t.conn.Close()
+func (t *transport) listen(ctx context.Context) {
 	reader := bufio.NewReader(t.conn)
-	for {
-		// The Node should send server.ping request continuously with a
-		// reasonable break in order to keep connection alive. If not
-		// client will receive a disconnection error and encounter
-		// io.EOF with following os.Exit(1).
-		line, err := reader.ReadBytes(delim)
-		if err != nil {
-			// block until start handle error
-			t.errors <- err
-			break
-		}
-		if DebugMode {
-			log.Printf("%s [debug] %s -> %s", time.Now().Format("2006-01-02 15:04:05"), t.conn.RemoteAddr(), line)
-		}
+	responses := make(chan []byte)
+	errs := make(chan error)
+	done := make(chan struct{})
+	defer close(done)
 
-		t.responses <- line
+	go func() {
+		for {
+			// The Node should send server.ping request continuously with a
+			// reasonable break in order to keep connection alive. If not
+			// client will receive a disconnection error and encounter
+			// io.EOF
+			line, err := reader.ReadBytes(delim)
+			if err != nil {
+				// Check if we're done. Going to get all sorts of
+				// errors once that happens.
+				select {
+				case <-done:
+					return
+
+				default:
+				}
+
+				// block until start handle error
+				if DebugMode {
+					log.Printf("transport encountered error: %s", err)
+				}
+
+				// The server closed the connection... This happens if we
+				// send unsupported requests to it.
+				if err == io.EOF {
+					err = errors.New("server closed connection (potentially because we sent an unsupported request)")
+				}
+				errs <- err
+				break
+			}
+			if DebugMode {
+				log.Printf("%s [debug] %s -> %s", time.Now().Format("2006-01-02 15:04:05"), t.conn.RemoteAddr(), line)
+			}
+
+			responses <- line
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			if DebugMode {
+				log.Printf("transport: listen: context finished, exiting loop")
+			}
+			return
+
+		case err := <-errs:
+			t.errors <- err
+		case res := <-responses:
+			t.responses <- res
+		}
 	}
 }
