@@ -49,8 +49,8 @@ type Node struct {
 	pushHandlersLock sync.RWMutex
 	pushHandlers     map[string][]chan *container
 
-	Error chan error
-	quit  chan struct{}
+	errs chan error
+	quit chan struct{}
 
 	// nextId tags a request, and get the same id from server result.
 	// Should be atomic operation for concurrence.
@@ -65,11 +65,16 @@ func NewNode() *Node {
 		handlers:     make(map[uint64]chan *container),
 		pushHandlers: make(map[string][]chan *container),
 
-		Error: make(chan error),
-		quit:  make(chan struct{}),
+		errs: make(chan error),
+		quit: make(chan struct{}),
 	}
 
 	return n
+}
+
+// Errors returns any errors the node ran into while listening to messages.
+func (n *Node) Errors() <-chan error {
+	return n.errs
 }
 
 // Connect creates a new TCP connection to the specified address. If the TLS
@@ -122,7 +127,7 @@ func (n *Node) listen(ctx context.Context) {
 			return
 
 		case err := <-n.transport.errors:
-			n.Error <- err
+			n.errs <- fmt.Errorf("transport: %w", err)
 
 		case bytes := <-n.transport.responses:
 			result := &container{
