@@ -123,7 +123,7 @@ func (n *Node) listen(ctx context.Context) {
 
 		case err := <-n.transport.errors:
 			n.Error <- err
-			n.shutdown()
+
 		case bytes := <-n.transport.responses:
 			result := &container{
 				content: bytes,
@@ -228,14 +228,32 @@ func (n *Node) request(ctx context.Context, method string, params []interface{},
 	return nil
 }
 
-func (n *Node) shutdown() {
+// Disconnect shuts down the node. It is safe to call multiple times. Subsequent
+// calls to the first one are no-ops.
+// TODO: implement support for draining requests and waiting until everything is
+// finished.
+func (n *Node) Disconnect() {
+	select {
+	// Already called! Make it a no-op
+	case <-n.quit:
+		return
+
+	default:
+	}
+
+	if n.transport == nil {
+		log.Printf("WARNING: disconnecting node before transport is set up")
+		return
+	}
+
+	if DebugMode {
+		log.Printf("disconnecting node")
+	}
+
 	close(n.quit)
 
-	n.transport = nil
+	n.transport.conn.Close()
+
 	n.handlers = nil
 	n.pushHandlers = nil
-}
-
-func (n *Node) Disconnect() {
-	n.shutdown()
 }
