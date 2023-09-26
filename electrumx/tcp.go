@@ -9,13 +9,18 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
+	"sync"
 )
 
 var DebugMode bool
 
 type transport struct {
-	conn      net.Conn
+	addr string
+	tls  *tls.Config
+
+	mu   sync.Mutex
+	conn net.Conn
+
 	responses chan []byte
 	errors    chan error
 }
@@ -37,7 +42,10 @@ func newTransport(ctx context.Context, addr string, sslConfig *tls.Config) (*tra
 	}
 
 	t := &transport{
-		conn:      conn,
+		conn: conn,
+
+		addr:      addr,
+		tls:       sslConfig,
 		responses: make(chan []byte),
 		errors:    make(chan error),
 	}
@@ -65,6 +73,14 @@ func (t *transport) SendMessage(ctx context.Context, body []byte) error {
 		return fmt.Errorf("send message: %w", ctx.Err())
 
 	case err := <-errs:
+
+		if errors.Is(err, net.ErrClosed) {
+			if _, err := t.reconnect(ctx); err != nil {
+				return fmt.Errorf("send message: %w", err)
+			}
+
+			return t.SendMessage(ctx, body)
+		}
 		return fmt.Errorf("send message: %w", err)
 
 	case <-done:
@@ -82,7 +98,7 @@ func (t *transport) listen(ctx context.Context) {
 	go func() {
 		for {
 			// The Node should send server.ping request continuously with a
-			// reasonable break in order to keep connection alive. If not
+			// reasonable break in order to keep the connection alive. If not, the
 			// client will receive a disconnection error and encounter
 			// io.EOF
 			line, err := reader.ReadBytes(delim)
@@ -103,9 +119,19 @@ func (t *transport) listen(ctx context.Context) {
 
 				// The server closed the connection... This happens if we
 				// send unsupported requests to it.
-				if err == io.EOF {
+				switch {
+				case errors.Is(err, io.EOF):
 					err = errors.New("server closed connection (potentially because we sent an unsupported request)")
+
+				case errors.Is(err, net.ErrClosed):
+					reader, err = t.reconnect(ctx)
+					if err == nil {
+						continue
+					}
+					err = fmt.Errorf("read message: %w", err)
+
 				}
+
 				errs <- err
 				break
 			}
@@ -131,4 +157,21 @@ func (t *transport) listen(ctx context.Context) {
 			t.responses <- res
 		}
 	}
+}
+
+func (t *transport) reconnect(ctx context.Context) (*bufio.Reader, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	var err error
+
+	t.conn, err = newConn(ctx, t.addr, t.tls)
+
+	if err != nil {
+		return nil, fmt.Errorf("re-establish connection: %w", err)
+	}
+	if DebugMode {
+		log.Printf("[debug] connection closed but managed to re-establish")
+	}
+
+	return bufio.NewReader(t.conn), nil
 }
