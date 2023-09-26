@@ -47,7 +47,7 @@ func newTransport(ctx context.Context, addr string, sslConfig *tls.Config) (*tra
 
 func (t *transport) SendMessage(ctx context.Context, body []byte) error {
 	if DebugMode {
-		log.Printf("%s [debug] %s <- %s", time.Now().Format("2006-01-02 15:04:05"), t.conn.RemoteAddr(), body)
+		log.Printf("[debug] %s <- %s", t.conn.RemoteAddr(), body)
 	}
 
 	done := make(chan struct{})
@@ -110,7 +110,7 @@ func (t *transport) listen(ctx context.Context) {
 				break
 			}
 			if DebugMode {
-				log.Printf("%s [debug] %s -> %s", time.Now().Format("2006-01-02 15:04:05"), t.conn.RemoteAddr(), line)
+				log.Printf("[debug] %s -> %s", t.conn.RemoteAddr(), line)
 			}
 
 			responses <- line
