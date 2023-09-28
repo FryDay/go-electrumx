@@ -1,6 +1,6 @@
 module github.com/FryDay/electrumx/examples
 
-go 1.21.0
+go 1.21
 
 replace github.com/FryDay/go-electrumx/electrumx => ./../electrumx
 
