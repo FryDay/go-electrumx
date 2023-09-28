@@ -19,7 +19,7 @@ See [examples](https://github.com/FryDay/go-electrumx/tree/master/examples) for 
 
 If you find these packages useful, please consider flipping me a few satoshis :hugs:
 
-<img src="https://github.com/FryDay/go-electrumx/raw/master/media/qr.png" alt="bc1qdlg5jwyaa7gyx2gxdmtqhz4l7uy09xy4rrjfm4" title="bc1qdlg5jwyaa7gyx2gxdmtqhz4l7uy09xy4rrjfm4" width="300px" />
+<img src="https://github.com/FryDay/go-electrumx/raw/master/media/qr.png" alt="bc1qtsh9vfy2xc5n972lhh0rezkj0ny7kjktwsrl6z" title="bc1qtsh9vfy2xc5n972lhh0rezkj0ny7kjktwsrl6z" width="300px" />
 
 # License
 
